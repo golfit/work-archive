@@ -4,15 +4,12 @@ import numpy
 
 class Mirnov :
     '''
-    This class is a wrapper for Mirnov coil data for a discharge.
-    It also combines useful signal processing tools.
+    This class is a wrapper for Mirnov coil data for a discharge,
+    including signals, as well as location information.
     
-    I'd rather do this in Matlab, but, as of 13 March 2018, the Java
-    interface crashes Matlab, and there have been numerous other problems
-    before this (connections intermittently lost, data pulls fail, etc.),
-    and so building a Python framework seems a good backup.
+    It will slowly incorporate useful signal processing tools.
     
-    Python3 style - we'll see how that goes
+    It is written for Python3, but should be compatible for Python2....
     
     T. Golfinopoulos, 13 March 2018
     '''
