@@ -1,0 +1,3 @@
+#Don't add compiled Python files
+*.pyc
+*/*.pyc
