@@ -1,0 +1,54 @@
+#This script stamps the correct pointers into the raw data nodes in the \magnetics::top.shoelace to reflect the current state of wiring.
+#Ted Golfinopoulos, 12 March 2015
+#Last updated 12 March 2015
+
+import sys #For getting command line arguments
+from MDSplus import *
+
+if(len(sys.argv)>1) :
+	s=int(sys.argv[1]) #Grab shot number from command line.
+else :
+	s=-1 #Default to shot -1
+
+tree=Tree('magnetics',s)
+
+#Data from I/V box looking into antenna (I/V Box #3)
+tree.getNode('SHOELACE:ANT_I:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_01'))
+tree.getNode('SHOELACE:ANT_V:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_02'))
+
+#Data from I/V box looking into matching network (I/V Box #4)
+tree.getNode('SHOELACE:MATCH_I:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_03'))
+tree.getNode('SHOELACE:MATCH_V:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_04'))
+
+#Data from I/V box monitoring output from Source #1 (I/V Box #1)
+tree.getNode('SHOELACE:SRC_I:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_05'))
+tree.getNode('SHOELACE:SRC_V:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_06'))
+
+#Data from I/V box monitoring output from Source #2 (I/V Box #2)
+tree.getNode('SHOELACE:SRC2_I:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_07'))
+tree.getNode('SHOELACE:SRC2_V:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_08'))
+
+#Outputs from Master Control Board of matching network
+tree.getNode('SHOELACE:MCB_OUT:SER_CODE:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_09')) #Series capacitor code
+tree.getNode('SHOELACE:MCB_OUT:PAR_CODE:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_10')) #Parallel capacitor code
+tree.getNode('SHOELACE:MCB_OUT:N_PER:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_11')) #Period measured by MCB
+
+#Voltage controlled oscillator ("homemade function generator", master input to amplifiers) outputs
+tree.getNode('SHOELACE:VCO_RF').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_12'))
+tree.getNode('SHOELACE:VCO_SYNC').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_13'))
+
+#Voltage over antenna when in pickup mode - not active as of 12 March 2015, but will be
+tree.getNode('SHOELACE:V_PICKUP:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_02')) #Will need to swap inputs when make change.  Also, may need to isolate input with buffer...tricky...transformer, too, maybe.
+
+#Auxiliary ("spare") current and voltage signals, e.g. from auxiliary 10:1 Pearson current monitor for antenna current, dummy load current and voltage, etc.
+tree.getNode('SHOELACE:SPARE_I:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_15')) #Address and usage may change
+tree.getNode('SHOELACE:SPARE_V:RAW').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_16')) #Address and usage may change
+
+#QCM phase lock outputs - not active currently, but will be at some point
+tree.getNode('SHOELACE.QCM_DETECT').putData(Data.compile('SHOELACE.CPCI.ACQ216_1:INPUT_14'))
+tree.getNode('SHOELACE:QCM_SYNC').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_15'))
+
+#Timebase synchronization - not active as of 12 March 2015, but will be later
+tree.getNode('SHOELACE.CPCI:ACQ216_1:T_SIG_CHAN').putData(Data.compile('SHOELACE.CPCI:ACQ216_1:INPUT_16'))
+
+print("Done updating data addresses for Shot #"+str(s))

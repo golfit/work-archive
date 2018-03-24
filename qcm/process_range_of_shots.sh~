@@ -1,0 +1,28 @@
+#! /bin/sh
+#Process range of shots - all shots in range will be used as input to the process_shoelace.sh script.
+#Usage: process_range_of_shots startShot endShot
+#startShot = integer argument - shot num
+#endShot = integer argument - shot num
+#Ted Golfinopoulos, 21 Feb 2012
+
+#Loop through shots in each range
+#for ((s=${shotRangeStart[i]}; s<=${shotRangeStop[i]}; s++))
+
+firstShot=$1
+expectedArgs=2
+
+if [ $# = $expectedArgs ]; then
+	lastShot=$2
+else
+	lastShot=$1
+fi
+
+for ((s=firstShot; s<=lastShot; s++))
+do
+	#Setup necessary nodes for shot.
+	#python SetupCalibrationNodes.py $s
+	#Call process_shoelace script on shot.
+	#bash /usr/local/cmod/codes/edge/idl/process_shoelace.sh $s
+	echo $s
+done
+

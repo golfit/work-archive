@@ -1,0 +1,111 @@
+//Series Code, T=6:1, effective capacitance data from 1120501901
+//Corner frequencies for capacitor lookup table:
+//Corner frequencies between tuning code configurations = N-index and N-index+1
+//where N = total number of configurations (including baseload), and index
+//index is the index of n_clk_corner.
+n_clk_corner[0]=14'b1001010011011; //f=42 kHz
+n_clk_corner[1]=14'b1001000110011; //f=43 kHz
+n_clk_corner[2]=14'b1000111001101; //f=44 kHz
+n_clk_corner[3]=14'b1000101101010; //f=45 kHz
+n_clk_corner[4]=14'b1000011010100; //f=46 kHz
+n_clk_corner[5]=14'b1000001000010; //f=48 kHz
+n_clk_corner[6]=14'b111111111101; //f=49 kHz
+n_clk_corner[7]=14'b111111010101; //f=49 kHz
+n_clk_corner[8]=14'b111110011000; //f=50 kHz
+n_clk_corner[9]=14'b111100111110; //f=51 kHz
+n_clk_corner[10]=14'b111011101101; //f=52 kHz
+n_clk_corner[11]=14'b111010101011; //f=53 kHz
+n_clk_corner[12]=14'b111001011101; //f=54 kHz
+n_clk_corner[13]=14'b111000010010; //f=56 kHz
+n_clk_corner[14]=14'b110111000111; //f=57 kHz
+n_clk_corner[15]=14'b110110000010; //f=58 kHz
+n_clk_corner[16]=14'b110100111000; //f=59 kHz
+n_clk_corner[17]=14'b110011100111; //f=61 kHz
+n_clk_corner[18]=14'b110010100111; //f=62 kHz
+n_clk_corner[19]=14'b110001100101; //f=63 kHz
+n_clk_corner[20]=14'b110000100000; //f=64 kHz
+n_clk_corner[21]=14'b101111011011; //f=66 kHz
+n_clk_corner[22]=14'b101110011001; //f=67 kHz
+n_clk_corner[23]=14'b101101011101; //f=69 kHz
+n_clk_corner[24]=14'b101100011110; //f=70 kHz
+n_clk_corner[25]=14'b101011100000; //f=72 kHz
+n_clk_corner[26]=14'b101010101101; //f=73 kHz
+n_clk_corner[27]=14'b101001110111; //f=75 kHz
+n_clk_corner[28]=14'b101000111110; //f=76 kHz
+n_clk_corner[29]=14'b101000001000; //f=78 kHz
+n_clk_corner[30]=14'b100111010011; //f=80 kHz
+n_clk_corner[31]=14'b100110011010; //f=81 kHz
+n_clk_corner[32]=14'b100101100100; //f=83 kHz
+n_clk_corner[33]=14'b100100101111; //f=85 kHz
+n_clk_corner[34]=14'b100011111110; //f=87 kHz
+n_clk_corner[35]=14'b100011010011; //f=89 kHz
+n_clk_corner[36]=14'b100010100001; //f=90 kHz
+n_clk_corner[37]=14'b100001101111; //f=93 kHz
+n_clk_corner[38]=14'b100001000010; //f=95 kHz
+n_clk_corner[39]=14'b100000010001; //f=97 kHz
+n_clk_corner[40]=14'b11111100010; //f=99 kHz
+n_clk_corner[41]=14'b11110110101; //f=101 kHz
+n_clk_corner[42]=14'b11110001110; //f=103 kHz
+n_clk_corner[43]=14'b11101100000; //f=106 kHz
+n_clk_corner[44]=14'b11100101101; //f=109 kHz
+n_clk_corner[45]=14'b11100000110; //f=111 kHz
+n_clk_corner[46]=14'b11011100001; //f=114 kHz
+n_clk_corner[47]=14'b11010110111; //f=116 kHz
+n_clk_corner[48]=14'b11010010011; //f=119 kHz
+n_clk_corner[49]=14'b11001111011; //f=120 kHz
+n_clk_corner[50]=14'b11001100111; //f=122 kHz
+n_clk_corner[51]=14'b11001001111; //f=124 kHz
+n_clk_corner[52]=14'b11000101110; //f=126 kHz
+n_clk_corner[53]=14'b11000001011; //f=129 kHz
+n_clk_corner[54]=14'b10111101011; //f=132 kHz
+n_clk_corner[55]=14'b10111001111; //f=134 kHz
+n_clk_corner[56]=14'b10110110000; //f=137 kHz
+n_clk_corner[57]=14'b10110010001; //f=140 kHz
+n_clk_corner[58]=14'b10101110100; //f=143 kHz
+n_clk_corner[59]=14'b10101011010; //f=146 kHz
+n_clk_corner[60]=14'b10101000001; //f=149 kHz
+n_clk_corner[61]=14'b10100100110; //f=152 kHz
+n_clk_corner[62]=14'b10100001101; //f=155 kHz
+n_clk_corner[63]=14'b10011110101; //f=158 kHz
+n_clk_corner[64]=14'b10011011110; //f=160 kHz
+n_clk_corner[65]=14'b10011000110; //f=164 kHz
+n_clk_corner[66]=14'b10010110000; //f=167 kHz
+n_clk_corner[67]=14'b10010011000; //f=170 kHz
+n_clk_corner[68]=14'b10010000000; //f=174 kHz
+n_clk_corner[69]=14'b10001100111; //f=177 kHz
+n_clk_corner[70]=14'b10001010001; //f=181 kHz
+n_clk_corner[71]=14'b10000111101; //f=184 kHz
+n_clk_corner[72]=14'b10000100111; //f=188 kHz
+n_clk_corner[73]=14'b10000010010; //f=192 kHz
+n_clk_corner[74]=14'b1111111110; //f=196 kHz
+n_clk_corner[75]=14'b1111101010; //f=200 kHz
+n_clk_corner[76]=14'b1111010110; //f=204 kHz
+n_clk_corner[77]=14'b1111000001; //f=208 kHz
+n_clk_corner[78]=14'b1110101111; //f=212 kHz
+n_clk_corner[79]=14'b1110100110; //f=214 kHz
+//Parallel Code, T=6:1, effective capacitance data from 1120501901
+//Corner frequencies for capacitor lookup table:
+//Corner frequencies between tuning code configurations = N-index and N-index+1
+//where N = total number of configurations (including baseload), and index
+//index is the index of n_clk_corner.
+n_clk_corner[0]=14'b1000010100101; //f=47 kHz
+n_clk_corner[1]=14'b111111101000; //f=49 kHz
+n_clk_corner[2]=14'b111101110000; //f=51 kHz
+n_clk_corner[3]=14'b111011110001; //f=52 kHz
+n_clk_corner[4]=14'b111001110111; //f=54 kHz
+n_clk_corner[5]=14'b111000000010; //f=56 kHz
+n_clk_corner[6]=14'b110110010100; //f=58 kHz
+n_clk_corner[7]=14'b110100101101; //f=59 kHz
+n_clk_corner[8]=14'b110011000000; //f=61 kHz
+n_clk_corner[9]=14'b110001010010; //f=63 kHz
+n_clk_corner[10]=14'b101111101000; //f=66 kHz
+n_clk_corner[11]=14'b101110000101; //f=68 kHz
+n_clk_corner[12]=14'b101100101011; //f=70 kHz
+n_clk_corner[13]=14'b101011010010; //f=72 kHz
+n_clk_corner[14]=14'b101001111101; //f=74 kHz
+n_clk_corner[15]=14'b101000101101; //f=77 kHz
+n_clk_corner[16]=14'b100111011100; //f=79 kHz
+n_clk_corner[17]=14'b100110001010; //f=82 kHz
+n_clk_corner[18]=14'b100100111110; //f=85 kHz
+n_clk_corner[19]=14'b100011110111; //f=87 kHz
+n_clk_corner[20]=14'b100010110110; //f=90 kHz

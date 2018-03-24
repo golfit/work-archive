@@ -1,0 +1,203 @@
+//1120502
+//All five cap-boards in
+//Load data from
+s=1120419902;
+% s=1120420902;
+mdsconnect('alcdata')
+mdsopen('magnetics',s)
+    [t,zr]=getXY('shoelace:ant_zr');
+    [~,zi]=getXY('shoelace:ant_zi');
+    [~,fdat]=getXY('shoelace:vco_freq');
+mdsclose()
+mdsdisconnect()
+zant=zr+1i*zi;
+t1=0.52;
+t150=0.7182; %Time at which fdat > 150E3 Hz for first time.
+t2=1.0;
+pureLoadData=LoadData(2*pi*fdat(t>t1&t<t2), zant(t>t1&t<t2));
+
+%Mean inductance.
+Lmean=mean(zi(t>t1&t<t2)./(2*pi*fdat(t>t1&t<t2)));
+
+%Let's try using resistance from 'scope measurements, and inductance from
+%I/V box measurements.
+scopeLoad=QcmLoadInSituBox(1.0, 1.00);
+%Splice I/V box measured resistance for low frequency and scope
+%measurements for high frequencies based on observed optimization of
+%throughput.
+rAntCombine=smooth([zr(t>t1&t<t150); scopeLoad.r(2*pi*fdat(t>=t150&t<t2))],20);
+xAnt=2*pi*fdat(t>t1&t<t2)*Lmean; %Enforce a constant inductance over frequency range.
+
+% loadData=LoadData(2*pi*fdat(t>t1&t<t2), scopeLoad.r(2*pi*fdat(t>t1&t<t2))+1i*zi(t>t1&t<t2));
+
+loadData=LoadData(2*pi*fdat(t>t1&t<t2), rAntCombine+1i*xAnt);
+//Series Code, T=6:1, effective capacitance data from 1120426929
+//Corner frequencies for capacitor lookup table:
+//Corner frequencies between tuning code configurations = N-index and N-index+1
+//where N = total number of configurations (including baseload), and index
+//index is the index of n_clk_corner.
+n_clk_corner[0]=14'b1001010110111; //f=42 kHz
+n_clk_corner[1]=14'b1001001001100; //f=43 kHz
+n_clk_corner[2]=14'b1000110011001; //f=44 kHz
+n_clk_corner[3]=14'b1000100011000; //f=46 kHz
+n_clk_corner[4]=14'b1000011101101; //f=46 kHz
+n_clk_corner[5]=14'b1000010011100; //f=47 kHz
+n_clk_corner[6]=14'b1000001000100; //f=48 kHz
+n_clk_corner[7]=14'b111111111110; //f=49 kHz
+n_clk_corner[8]=14'b111110110011; //f=50 kHz
+n_clk_corner[9]=14'b111101010101; //f=51 kHz
+n_clk_corner[10]=14'b111100001001; //f=52 kHz
+n_clk_corner[11]=14'b111011000100; //f=53 kHz
+n_clk_corner[12]=14'b111001110101; //f=54 kHz
+n_clk_corner[13]=14'b111000100100; //f=55 kHz
+n_clk_corner[14]=14'b110111001111; //f=57 kHz
+n_clk_corner[15]=14'b110110000111; //f=58 kHz
+n_clk_corner[16]=14'b110100111111; //f=59 kHz
+n_clk_corner[17]=14'b110011110011; //f=60 kHz
+n_clk_corner[18]=14'b110010101101; //f=62 kHz
+n_clk_corner[19]=14'b110001101110; //f=63 kHz
+n_clk_corner[20]=14'b110000101111; //f=64 kHz
+n_clk_corner[21]=14'b101111101110; //f=65 kHz
+n_clk_corner[22]=14'b101110101001; //f=67 kHz
+n_clk_corner[23]=14'b101101100001; //f=69 kHz
+n_clk_corner[24]=14'b101100100010; //f=70 kHz
+n_clk_corner[25]=14'b101011110000; //f=71 kHz
+n_clk_corner[26]=14'b101010110011; //f=73 kHz
+n_clk_corner[27]=14'b101001110101; //f=75 kHz
+n_clk_corner[28]=14'b101001000010; //f=76 kHz
+n_clk_corner[29]=14'b101000000111; //f=78 kHz
+n_clk_corner[30]=14'b100111010100; //f=79 kHz
+n_clk_corner[31]=14'b100110100000; //f=81 kHz
+n_clk_corner[32]=14'b100101101010; //f=83 kHz
+n_clk_corner[33]=14'b100101000000; //f=84 kHz
+n_clk_corner[34]=14'b100100001101; //f=86 kHz
+n_clk_corner[35]=14'b100011011000; //f=88 kHz
+n_clk_corner[36]=14'b100010100111; //f=90 kHz
+n_clk_corner[37]=14'b100001111000; //f=92 kHz
+n_clk_corner[38]=14'b100001001100; //f=94 kHz
+n_clk_corner[39]=14'b100000011111; //f=96 kHz
+n_clk_corner[40]=14'b11111110001; //f=98 kHz
+n_clk_corner[41]=14'b11111000010; //f=101 kHz
+n_clk_corner[42]=14'b11110011001; //f=103 kHz
+n_clk_corner[43]=14'b11101110010; //f=105 kHz
+n_clk_corner[44]=14'b11101000111; //f=107 kHz
+n_clk_corner[45]=14'b11100011100; //f=110 kHz
+n_clk_corner[46]=14'b11011111011; //f=112 kHz
+n_clk_corner[47]=14'b11011011001; //f=114 kHz
+n_clk_corner[48]=14'b11010110100; //f=116 kHz
+n_clk_corner[49]=14'b11010100001; //f=118 kHz
+n_clk_corner[50]=14'b11010010101; //f=119 kHz
+n_clk_corner[51]=14'b11001111010; //f=121 kHz
+n_clk_corner[52]=14'b11001010110; //f=123 kHz
+n_clk_corner[53]=14'b11000111010; //f=125 kHz
+n_clk_corner[54]=14'b11000100000; //f=128 kHz
+n_clk_corner[55]=14'b11000000000; //f=130 kHz
+n_clk_corner[56]=14'b10111101000; //f=132 kHz
+n_clk_corner[57]=14'b10111010001; //f=134 kHz
+n_clk_corner[58]=14'b10110110111; //f=137 kHz
+n_clk_corner[59]=14'b10110100000; //f=139 kHz
+n_clk_corner[60]=14'b10110000110; //f=141 kHz
+n_clk_corner[61]=14'b10101100010; //f=145 kHz
+n_clk_corner[62]=14'b10101000000; //f=149 kHz
+n_clk_corner[63]=14'b10100101000; //f=152 kHz
+n_clk_corner[64]=14'b10100010000; //f=154 kHz
+n_clk_corner[65]=14'b10011111000; //f=157 kHz
+n_clk_corner[66]=14'b10011100001; //f=160 kHz
+n_clk_corner[67]=14'b10011001011; //f=163 kHz
+n_clk_corner[68]=14'b10010110101; //f=166 kHz
+n_clk_corner[69]=14'b10010100000; //f=169 kHz
+n_clk_corner[70]=14'b10010001011; //f=172 kHz
+n_clk_corner[71]=14'b10001110110; //f=175 kHz
+n_clk_corner[72]=14'b10001100010; //f=178 kHz
+n_clk_corner[73]=14'b10001001110; //f=181 kHz
+n_clk_corner[74]=14'b10000111011; //f=185 kHz
+n_clk_corner[75]=14'b10000101000; //f=188 kHz
+n_clk_corner[76]=14'b10000010110; //f=191 kHz
+n_clk_corner[77]=14'b10000000100; //f=195 kHz
+n_clk_corner[78]=14'b1111110010; //f=198 kHz
+n_clk_corner[79]=14'b1111100001; //f=201 kHz
+//Parallel Code, T=6:1, effective capacitance data from 1120426929
+//Corner frequencies for capacitor lookup table:
+//Corner frequencies between tuning code configurations = N-index and N-index+1
+//where N = total number of configurations (including baseload), and index
+//index is the index of n_clk_corner.
+n_clk_corner[0]=14'b1000010111000; //f=47 kHz
+n_clk_corner[1]=14'b111111111000; //f=49 kHz
+n_clk_corner[2]=14'b111101111101; //f=50 kHz
+n_clk_corner[3]=14'b111100000001; //f=52 kHz
+n_clk_corner[4]=14'b111010001111; //f=54 kHz
+n_clk_corner[5]=14'b111000011011; //f=55 kHz
+n_clk_corner[6]=14'b110110100110; //f=57 kHz
+n_clk_corner[7]=14'b110100110111; //f=59 kHz
+n_clk_corner[8]=14'b110011000110; //f=61 kHz
+n_clk_corner[9]=14'b110001100000; //f=63 kHz
+n_clk_corner[10]=14'b101111111100; //f=65 kHz
+n_clk_corner[11]=14'b101110011101; //f=67 kHz
+n_clk_corner[12]=14'b101101000010; //f=69 kHz
+n_clk_corner[13]=14'b101011000110; //f=73 kHz
+n_clk_corner[14]=14'b101001001111; //f=76 kHz
+n_clk_corner[15]=14'b100111111011; //f=78 kHz
+n_clk_corner[16]=14'b100110101010; //f=81 kHz
+n_clk_corner[17]=14'b100101011110; //f=83 kHz
+n_clk_corner[18]=14'b100100010100; //f=86 kHz
+n_clk_corner[19]=14'b100011001010; //f=89 kHz
+n_clk_corner[20]=14'b100010000111; //f=92 kHz
+n_clk_corner[21]=14'b100001000101; //f=94 kHz
+n_clk_corner[22]=14'b100000000010; //f=98 kHz
+n_clk_corner[23]=14'b11111000100; //f=101 kHz
+n_clk_corner[24]=14'b11110001010; //f=104 kHz
+n_clk_corner[25]=14'b11101010010; //f=107 kHz
+n_clk_corner[26]=14'b11100011010; //f=110 kHz
+n_clk_corner[27]=14'b11011100100; //f=113 kHz
+n_clk_corner[28]=14'b11010110010; //f=117 kHz
+n_clk_corner[29]=14'b11010000001; //f=120 kHz
+n_clk_corner[30]=14'b11001010010; //f=124 kHz
+n_clk_corner[31]=14'b11000100111; //f=127 kHz
+n_clk_corner[32]=14'b10111111100; //f=131 kHz
+n_clk_corner[33]=14'b10111010100; //f=134 kHz
+n_clk_corner[34]=14'b10110101100; //f=138 kHz
+n_clk_corner[35]=14'b10110000010; //f=142 kHz
+n_clk_corner[36]=14'b10101011100; //f=146 kHz
+n_clk_corner[37]=14'b10100111001; //f=149 kHz
+n_clk_corner[38]=14'b10100011000; //f=153 kHz
+n_clk_corner[39]=14'b10011111000; //f=157 kHz
+n_clk_corner[40]=14'b10011011011; //f=161 kHz
+n_clk_corner[41]=14'b10010111111; //f=165 kHz
+n_clk_corner[42]=14'b10010100110; //f=168 kHz
+n_clk_corner[43]=14'b10010001110; //f=171 kHz
+n_clk_corner[44]=14'b10001110110; //f=175 kHz
+n_clk_corner[45]=14'b10001100000; //f=178 kHz
+n_clk_corner[46]=14'b10001001011; //f=182 kHz
+n_clk_corner[47]=14'b10000110111; //f=185 kHz
+n_clk_corner[48]=14'b10000100100; //f=189 kHz
+n_clk_corner[49]=14'b10000000111; //f=194 kHz
+n_clk_corner[50]=14'b1111101000; //f=200 kHz
+n_clk_corner[51]=14'b1111010100; //f=204 kHz
+n_clk_corner[52]=14'b1111000000; //f=208 kHz
+n_clk_corner[53]=14'b1110101101; //f=212 kHz
+n_clk_corner[54]=14'b1110011011; //f=217 kHz
+n_clk_corner[55]=14'b1110001001; //f=221 kHz
+n_clk_corner[56]=14'b1101111000; //f=225 kHz
+n_clk_corner[57]=14'b1101101000; //f=229 kHz
+n_clk_corner[58]=14'b1101011000; //f=234 kHz
+n_clk_corner[59]=14'b1101001001; //f=238 kHz
+n_clk_corner[60]=14'b1100111010; //f=242 kHz
+n_clk_corner[61]=14'b1100101100; //f=246 kHz
+n_clk_corner[62]=14'b1100011110; //f=250 kHz
+n_clk_corner[63]=14'b1100010001; //f=255 kHz
+n_clk_corner[64]=14'b1100000100; //f=259 kHz
+n_clk_corner[65]=14'b1011111000; //f=263 kHz
+n_clk_corner[66]=14'b1011101100; //f=267 kHz
+n_clk_corner[67]=14'b1011100001; //f=271 kHz
+n_clk_corner[68]=14'b1011010110; //f=275 kHz
+n_clk_corner[69]=14'b1011001011; //f=279 kHz
+n_clk_corner[70]=14'b1011000001; //f=283 kHz
+n_clk_corner[71]=14'b1010111000; //f=287 kHz
+n_clk_corner[72]=14'b1010101110; //f=291 kHz
+n_clk_corner[73]=14'b1010100101; //f=295 kHz
+n_clk_corner[74]=14'b1010011101; //f=299 kHz
+n_clk_corner[75]=14'b1010010100; //f=303 kHz
+n_clk_corner[76]=14'b1010001100; //f=306 kHz
+n_clk_corner[77]=14'b1010000100; //f=310 kHz
+n_clk_corner[78]=14'b1001111101; //f=314 kHz
+n_clk_corner[79]=14'b1001110110; //f=317 kHz

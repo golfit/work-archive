@@ -1,0 +1,41 @@
+#SetupCalibrationNodes.py
+#This script puts calibration nodes into a tree to prepare for I/V box voltage calibration.
+#Ted Golfinopoulos, 20 Feb 2012
+
+import sys #For getting command line arguments
+from MDSplus import *
+
+if(len(sys.argv)>1) :
+	s1=int(sys.argv[1]) #Grab shot number from command line.
+else :
+	s1=-1 #Default to shot -1
+
+if(len(sys.argv)>2) :
+	s2=int(sys.argv[2]) #Grab shot number from command line.
+else :
+	s=s2 #Default to shot -1
+
+def addCalibNodes(tree,node,boxNum) :
+	tree.setDefault(node)
+	#Add box number node
+	tree.addNode('box_num','numeric')
+	tree.getNode('box_num').putData(boxNum)
+	#Add calibrated node
+	tree.addNode('calibrated','signal')
+
+for s in range(s1,s2+1) :
+	tree=Tree('Magnetics',s,'edit')
+
+	#antVNode=tree.getNode('\\magnetics::top.shoelace:ant_v')
+	#srcVNode=tree.getNode('\\magnetics::top.shoelace:src_v')
+	#pickupNode=tree.getNode('\\magnetics::top.shoelace:v_pickup')
+	#spareVNode=tree.getNode('\\magnetics::top.shoelace:spare_v')
+	src2VNode=tree.getNode('\\magnetics::top.shoelace:src2_v')
+
+	#addCalibNodes(tree,antVNode,2)
+	#addCalibNodes(tree,srcVNode,3)
+	#addCalibNodes(tree,pickupNode,4)
+	addCalibNodes(tree,src2VNode,1)
+
+	#Write changes to tree
+	tree.write()

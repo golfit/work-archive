@@ -1,0 +1,5 @@
+from MDSplus import *
+
+s=int(Data.compile('current_shot("cmod")').evaluate())
+
+print(s)

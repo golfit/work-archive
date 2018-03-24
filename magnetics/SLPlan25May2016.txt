@@ -1,0 +1,71 @@
+MP 810 - Shoelace antenna, post-move - Day 2
+
+*********
+Run Info:
+*********
+NOTE: this run may be postponed until Thursday pending progress of main cell door repairs.
+
+Reference discharge: 1160520029
+
+Boronization: evening before
+
+ECDC: He ECDC after boronization
+
+Toroidal field: Low-field startup near 3.2 T, flattop will start around 2.7 T to recover 1120814021.  After initial set of 3 T-flattop plasmas, will transition to higher fields later in the day.  Range of flattop fields will be between 2.5 and 4 T.
+
+L-mode target NL04 0.7-1.1x10^20 /m^2
+
+Ip: ~0.75 MA, nominal
+
+Cryopump: yes
+ICRF: standby - possible use for brief (100 ms or less), low-power (1 MW or less) pulses to trigger H-mode transition
+LH: no
+DNB: no
+
+***
+Special Gas Puffing:
+* For GPI: fill C-Port NINJA plenum with 8 PSI helium
+* For CXRS: fill F-Port NINJA with 8 PSI D2
+* argon puff for HiREX Sr - will use later in the run
+***
+Required Diagnostics Set:
+GPI
+(Mirror Langmuir Probe on A-port scanning probe <- must have this for Part 1 - since ASP is down, we are only doing half-day)
+Mirnov coils
+PCI
+Reflectometer (both fixed and scanning frequency)
+Thomson Scattering
+***
+Desired Diagnostics:
+ECE
+CXRS
+HiREX Sr
+TCI/polarimeter if available
+
+***************
+Basic Run Plan:
+***************
+First Reference Discharge: 1160520029
+
+Basic run plan:
+1. (5- 8 shots) Boronization recovery 
+
+2. (5 shots) Discharge development: Recover ohmic EDA H-mode.  Make sure outer gap is small.  Try small jog in Ip to help trigger H-mode.  Try to avoid disruption in rampdown; can also shorten length of pulse to make rampdown smoother, shorten time between pulses.
+
+3. (5-9 shots) Examine QCM, Shoelace response
+(a) (1 shot) get fiducial shot - measure QCM without Shoelace antenna powered
+(b) (i) (2 shots) Perform Shoelace antenna power scan with rising (1 shot) and falling (1 shot) stepped power levels with varying frequency at each step
+(ii) (2 shots) Perform Shoelace antenna power scan with ramping power and fixed frequency
+(c) (2-4 shots) if haven't gotten good MLP scan yet measuring Shoelace response, adjust scan timing, depth to achieve this
+
+4. Start shot-to-shot scan of Bt and Ip - get through as much of scan as time allows.
+(At this point in run, can start trying to puff Ar for HiREX during last 100-200 ms of pulse, assuming Shoelace measurements are complete by then.  Stop if it kills the H-mode.)
+a. (2 shots) Increase Bt to 4.0 T, leave Ip at 0.75 MA, repeat Part 2b and c
+b. (2 shots) Leave Bt at 4.0 T, increase Ip to 0.85 MA, repeat Part 2b and c
+c. (2 shots) Leave Bt at 4.0 T, increase Ip to 0.95 MA, repeat Part 2b and c
+d. (2 shots) Increase Bt to 5.0 T, leave Ip at 0.95 MA, repeat Part 2b and c
+e. (2 shots) Leave Bt at 5.0 T, decrease Ip to 0.85 MA, repeat Part 2b and c
+f. (2 shots) Leave Bt at 5.0 T, decrease Ip to 0.75 MA, repeat Part 2b and c 
+
+5. (should time allow) HiREX Locked Mode Calibration
+1160429015 

@@ -1,0 +1,41 @@
+#SetupCharacterizationNodes.py
+#This script puts in a subtree for nodes used to characterize the individual circuit elements.
+#Ted Golfinopoulos, 16 Mar 2012
+
+import sys #For getting command line arguments
+from MDSplus import *
+
+if(len(sys.argv)>1) :
+	s=int(sys.argv[1]) #Grab shot number from command line.
+else :
+	s=-1 #Default to shot -1
+
+tree=Tree('Magnetics',s,'edit')
+
+tree.setDefault(tree.getNode('shoelace')) #Set default to top level of shoelace subtree.
+tree.addNode('characterize', 'structure')
+
+tree.setDefault(tree.getNode('characterize'))
+
+tree.addNode('transformer','structure')
+tree.addNode('ser','structure') #Series element waveforms
+tree.addNode('par','structure') #Parallel element waveforms
+
+def setupNode(node,vExpr,iExpr,vTimeNode,iTimeNode) :
+	node.addNode('v','signal')
+	node.addNode('i','signal')
+	node.getNode('v').putData(Data.compile('build_signal( '+vExpr+', *, dim_of('+vTimeNode+'))'))
+	node.getNode('i').putData(Data.compile('build_signal( '+iExpr+', *, dim_of('+iTimeNode+'))'))
+
+vsPath='shoelace.src_v' #Voltage on source side of transformer
+vaPath='shoelace.ant_v' #Voltage over antenna
+vinPath='shoelace.spare_v' #Voltage on load-side of transformer
+
+isPath='shoelace.src_i' #Current going into transformer
+iaPath='shoelace.ant_i' #Current going into antenna
+iinPath='shoelace.spare_i' #Current coming out of transformer
+
+#setupNode(tree.getNode('transformer'), vsPath+'-'+vinPath, )
+
+#Write changes to tree
+tree.write()

@@ -1,0 +1,112 @@
+#This script reads in a shot list and processes the cross coherence spectrogram between the given nodes and the antenna current signal.
+#Ted Golfinopoulos, 16 Aug 2012
+
+from MDSplus import *
+import sys #For getting command line arguments
+import numpy
+import myTools_no_sql as myTools
+from scipy.fftpack import hilbert
+from scipy.interpolate import interp1d
+import re
+from calcTransFun import *
+
+
+#Parse shot information, contained in first command-line argument
+sList=myTools.parseList(sys.argv[1])
+
+#List of nodes in remaining command line arguments
+
+stringArgs=sys.argv[2:]
+
+#Loop through shots in list
+for s in sList :
+	print("Shot {0:d}".format(s))
+
+	#Open magnetics tree to get Shoelace antenna signal.
+	magTree=Tree('magnetics',s, 'edit')
+
+	if(s<1110000000 and s>0) : antNode=magTree.getNode('active_mhd.signals:i_gh_upper_z') #Old current node for Active MHD antenna - for comparison with Jason Sears' work.
+	else : antNode=magTree.getNode('shoelace.ant_i') #Shoelace antenna current node.
+
+	#Check to see if antenna current node is on - if it is not, skip and continue.
+	if(not(antNode.isOn())):
+		print("Antenna current node is off for Shot {0:d} - skip and continue".format(s))
+		continue
+
+	usePremadeListFlag=False #Flag to indicate whether user has specified a premade list of nodes, or has entered them explicitly at the command line.
+	nodeList=[] #Initialize variable to hold paths of list of "output signal" nodes - calculate transfer function for these signals.
+
+	nodeList,ceceNodes=myTools.parsePremadeNodeList(stringArgs, s)
+
+	if(len(nodeList)>0) : usePremadeListFlag=True
+
+	if(not(usePremadeListFlag)) :
+		nodeList=stringArgs #Otherwise, user has specified list of signals, explicitly.
+
+	#Loop through nodes for which transfer function is desired
+	for nodeName in nodeList :
+		#Parse tree name
+		extractTreeName=re.findall('(\\\)(.+)(::)',nodeName)
+		if(len(extractTreeName)==0) :
+			sigTree=magTree #Default tree is magnetics
+			treeName='magnetics'
+		else :
+			treeName = extractTreeName[0][1] #Second argument from regular expression output is tree name
+			sigTree=Tree(treeName,s)
+
+		sigNode=sigTree.getNode(nodeName)
+		#See if node is on; if it is off, skip and go to next.
+		if( not(sigNode.isOn()) ) :
+			print("Node, "+str(sigNode.getPath())+" is off; skipping and continuing")
+			continue
+
+		probeName=sigNode.getNodeName() #Grab name of node.
+
+		#Add up and down to names of ASP probes.
+		if( re.search('.UP:',nodeName) ) : probeName=probeName+"UP"
+		elif( re.search('.DN:',nodeName ) ) : probeName=probeName+"DN"
+
+		if(s<1110000000 and s>0) : topNode=magTree.getNode('active_mhd')
+		else : topNode=magTree.getNode('shoelace')
+
+		try :
+			#Add new tree node to hold transfer functions
+			topNode.addNode('cross_pow','structure')
+
+			#Write changes to tree.
+			magTree.write()
+		except :
+			print("...can't add cross power structure node - may exist already")
+
+		pxyNode=topNode.getNode('cross_pow')
+
+		try :
+			#Add a node for each coil
+			print('0')
+			pxyNode.addNode(str(probeName),'numeric')
+			print('1')
+			#Add sub-nodes for node.
+			n=pxyNode.getNode(str(probeName))
+			print('2')
+			n.addNode('t_range','numeric')
+			print('3')
+			n.addNode('freq_range','numeric')
+			print('4')
+			n.addNode('n_time_pts','numeric')
+			print('5')
+			n.addNode('n_freq_pts','numeric')
+			print('6')
+			n.addNode('Pxy_r','numeric')
+			print('7')
+			n.addNode('Pxy_i','numeric')
+			print('8')
+
+			#Write changes to tree.
+			magTree.write()
+		except :
+			print(probeName)
+			print(str(pxyNode.getFullPath()))
+			n=pxyNode.getNode(str(probeName))
+			print("...cross power function subnodes for "+probeName+" are already there")
+
+		print("Setup cross power nodes in "+n.getPath()+" for Shot {0:d}".format(s))

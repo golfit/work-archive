@@ -1,0 +1,90 @@
+# Create nodes associated with Master Controller Board of Shoelace Antenna matching network.
+# 23 Jan 2012, Ted Golfinopoulos
+
+from MDSplus import *
+
+tree=Tree("MAGNETICS", -1) #Open model tree
+#For now, do work on a test shot until design is in steady state.
+s=1120125998
+tree.createPulse(s) #Create a test shot
+tree = Tree("MAGNETICS", s, "EDIT")
+
+# Set the default directory to SHOELACE location.
+tree.setDefault(tree.getNode("SHOELACE"))
+
+# Add a child node (subtree, "STRUCTURE") for the Master Controller Board (MCB) -
+# this will store the associated nodes for the board outputs.
+tree.addNode("MCB_OUT", "STRUCTURE")
+tree.setDefault(tree.getNode("MCB_OUT")) #Make this child node default for further relative path references
+tree.addNode("COMMENT", "TEXT")
+tree.getNode("COMMENT").putData("Nodes pertaining to processing of outputs from MASTER CONTROLLER BOARD (MCB).  ENCODER_CLK=clock frequency used by number encoder - divided down from MCB clock (F_CLK).")
+tree.addNode("ENCODER_CLK", "NUMERIC")
+tree.getNode("ENCODER_CLK").putData(4.0E6/16.0)
+
+#Add nodes for logic states (codes) for series and parallel capacitor banks
+
+### CONVENIENCE FUNCTIONS
+#Function to print string for building a raw voltage signal given path references.
+def buildSig(nodePath, datPath) :
+#	expr="GETNCI("+nodePath+", \"ON\") ? Build_Signal(Build_With_Units("+datPath+", \"V\"), *, DIM_OF("+datPath+") : ABORT()"
+	#expr="Build_Signal(Build_With_Units("+datPath+", \"V\"), *, DIM_OF("+datPath+")"
+	expr=datPath
+	print(expr)
+	return expr
+
+#Function setting up nodes for series and parallel codes (stores time-encoded signal).  Identical topology for series and parallel caps - only names change.
+def buildCodeNode(tree,nodeName,datPath,comment) :
+	tree.addNode(nodeName, "SIGNAL")
+	nodePath="\\MAGNETICS::TOP.SHOELACE.MCB_OUT:"+nodeName
+	#tree.setDefault(tree.getNode(nodeName))
+	tree.addNode(nodeName+":RAW", "SIGNAL")
+	tree.getNode(nodeName+":RAW").putData(Data.compile(buildSig(nodePath, datPath))) #Put in String specifying where to get raw voltage with encoded series cap code.
+	tree.addNode(nodeName+":NBITS", "NUMERIC")
+	tree.getNode(nodeName+":NBITS").putData(7)
+	tree.addNode(nodeName+":COMMENT", "TEXT")
+	tree.getNode(nodeName+":COMMENT").putData(comment)
+#	tree.setDefault(tree.getNode(".-.")) #Reset default to parent level.
+###
+
+#Write in changes
+#tree.write()
+
+#Stamp in serial code nodes
+nodeName="SER_CODE"
+datPath="\\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_09"
+comment=nodeName+"=number encoding which boards should turn on which capacitors in associated series bank.  (Number which specifies tuning configuration for caps.); NBITS=number of bits in binary number encoded in signal"
+buildCodeNode(tree,nodeName,datPath, comment)
+
+#Stamp in parallel code nodes
+nodeName="PAR_CODE"
+datPath="\\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_10"
+comment=nodeName+"=number encoding which boards should turn on which capacitors in associated parallel bank.  (Number which specifies tuning configuration for caps.); NBITS=number of bits in binary number encoded in signal"
+buildCodeNode(tree,nodeName,datPath, comment)
+
+#Add node for interpreting frequency determined from period counter on MCB.
+nodeName="N_PER"
+datPath="\\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_11"
+comment="N_PER=number of clock cycles counted in M periods of sync signal; M=Number of signal (sync) cycles over which sync period is counted; F_CLK=clock frequency of Master Controller Board (MCB); FREQ_OUT = F_CLK*M/N_PER [Hz]; NBITS=number of bits in binary number encoded in signals"
+#Set up basic node template.
+buildCodeNode(tree, nodeName, datPath, comment)
+#Add additional nodes associated with converting clock counts per period into frequency.
+tree.setDefault(tree.getNode("N_PER"))
+tree.addNode("M", "NUMERIC")
+tree.getNode("M").putData(50.) #Number of sync counts in accumulation period
+tree.addNode("F_CLK", "NUMERIC")
+tree.getNode("F_CLK").putData(4000000.) # Clock frequency on MCB [Hz]
+tree.addNode("FREQ_OUT", "SIGNAL") #This node will hold the calculated frequency from the MCB.
+tree.getNode("NBITS").putData(14) #Overwrite previous nbits number with correct amount for period counter.
+datPath="\\MAGNETICS::TOP.SHOELACE.MCB_OUT:N_PER"
+freqCalcTdi="GETNCI("+datPath+", \"ON\") ? Build_Signal(Build_With_Units(F_CLK*M/("+datPath+"), \"Hz\"), *, DIM_OF("+datPath+") ) : ABORT()" #Ternary operator determining whether parent node is on; calculate frequency using clock counts.
+print(freqCalcTdi)
+tree.getNode("FREQ_OUT").putData(Data.compile(freqCalcTdi))
+
+#Write changes to tree.
+tree.write()
+
+#GETNCI(\MAGNETICS::TOP.SHOELACE.MCB_OUT:SER_CODE, "ON") ? Build_Signal(Build_With_Units(\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_09, "V"), *, DIM_OF(\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_09) : ABORT()
+
+#GETNCI(BP1T_GHK, "ON") ? Build_Signal(Build_With_Units(.-.DATA_ACQ.CPCI:ACQ_216_1:INPUT_07 * 1 / (\MAG_RF_COILS:CALIB[59] * 1), "Tesla/s"), *, DIM_OF(.-.DATA_ACQ.CPCI:ACQ_216_1:INPUT_07)) : ABORT()
+
+#\MAGNETICS::TOP.ACTIVE_MHD.DATA_ACQ.CPCI:ACQ_216_3:INPUT_09

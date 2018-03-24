@@ -1,0 +1,50 @@
+'''
+This script changes the expressions in the Shoelace signal nodes to point to the timebase node.
+
+Ted Golfinopoulos, 8 July 2015
+'''
+
+from MDSplus import *
+import sys #For getting command line arguments
+import numpy
+import myTools
+import re
+
+#Parse shot information, contained in first command-line argument
+sList=myTools.parseList(sys.argv[1])
+
+#Loop through shots in list
+for s in sList :
+    print("Shot {0:d}".format(s))
+
+    #Open magnetics tree.
+    magTree=Tree('magnetics',s)
+
+    #Get all nodes that need to be changed.
+    myNodes=magTree.getNodeWild('***.raw')
+
+    for n in myNodes :
+        if(not re.match('.*shoelace.*',str(n.getFullPath()).lower() )) :
+            print("not in Shoelace - skipping")
+            continue #Skip nodes not under Shoelace heading
+
+        #Get pointer to digitizer node from current expression - skip if can't get it.
+        currentExpr=str(n.getData())
+        myPattern='\\.shoelace\\.cpci:acq216_1:input_\d\d'
+        digiRef=re.findall(myPattern,currentExpr.lower())
+        if(len(digiRef)==0) :
+            continue
+        
+# - skip if already contains "build_signal"
+#        if(re.match('.*build_signal.*',str(n.getFullPath()).lower() )) :
+#            continue #Skip nodes which already have build_signal
+
+        #Synthesize new expression from old pointer.
+#        newExpr='Build_Signal('+currentExpr+', *, \MAGNETICS::TOP.SHOELACE:TIMEBASE)'
+        newExpr='Build_Signal(DATA($value),'+str(digiRef[0])+', \MAGNETICS::TOP.SHOELACE:TIMEBASE)'
+        n.putData(Data.compile(newExpr))
+        print(n.getFullPath())
+        print(Data.compile(newExpr))
+
+    print('Finished fixing Shoelace pickup voltage timebase reference for '+str(s))
+

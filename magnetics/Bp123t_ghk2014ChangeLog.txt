@@ -1,0 +1,12 @@
+Updates changing coil mapping to
+
+Channel Input | Patch Panel Label Name | Actual Coil
+-----------------------------------------------------
+ACQ_216_1:07  | BP1T_GHK               | BP3T_GHK
+ACQ_216_1:08  | BP2T_GHK               | BP2T_GHK   
+ACQ_216_1:09  | BP3T_GHK               | BP1T_GHK      
+
+On 12 Aug 2014:
+1140702
+1140714
+1140807

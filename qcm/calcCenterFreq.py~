@@ -1,0 +1,66 @@
+from matplotlib.pyplot import specgram
+#from scipy.signal import find_peaks_cwt as getPeaks
+from numpy import log2, floor, ceil, sqrt, zeros, transpose, squeeze, size
+from numpy import logical_and as logicAnd
+import pdb
+
+def getFPeak( y, fs=1.0, fRange=None, nfft=None ) :
+	"""
+	Find the peak in the spectral power density of a signal, y.
+	USAGE:
+	[fp,t]=getFPeak( y, [fs=1], [fRange=[0 fs/2]], [nfft=sqrt(2*N)] )
+	where
+		y=signal to process, 1D array
+		fs=sampling frequency of y (Default=1)
+		fRange=Frequency range to look for peaks, in units of Fs (Default=0 to 0.5*fs)
+		nfft=Number of data points in each bin of y
+
+	output
+		fp=1D array of peak values at each time point
+		t=times corresponding to peak frequencies.
+
+	Ted Golfinopoulos, 18 July 2012
+	"""
+	ts=1/fs #Sampling time
+
+	#If no value for frequency range is specified, take all frequencies to Nyquist
+	if fRange is None :
+		fRange=[0.0, fs*0.5] #
+	
+	fRange=[min(fRange), max(fRange)] #Make sure fRange is sorted as min/max.
+
+	if (max(fRange)>fs*0.5) :
+		raise IOError('Maximum of frequency range must be < Nyquist frequency')
+
+	if nfft is None :
+		nfft=sqrt(2*len(y))
+
+	nfft=pow(2,ceil(log2(nfft))) #Make sure nfft is a power of 2.
+	
+	#Calculate spectrogram
+	[Pxx, F, T,im]=specgram(y, int(nfft), fs)
+
+#	print('Length of Pxx={0:d}'.format(len(Pxx)))
+#	print('Length of F={0:d}'.format(len(F)))
+#	print('Length of T={0:d}'.format(len(T)))
+#	print('NFFT={0:f}'.format(float(nfft)))
+
+	#Find peaks in spectrogram - search in each time bin of Pxx across all frequencies for a peak.
+	#Limit search to specified frequency range.
+	fp=zeros(len(T))-1 #Sentinel values for the peak.
+#	for P in transpose(Pxx) :
+#		print(F[P==max(P)])
+#	for i in range(0,size(Pxx,1)) :
+#		fp[i]=F[Pxx[:,i]==max(Pxx[:,i])]
+	temp=Pxx[logicAnd(F>fRange[0],F<fRange[1]),:]
+	Fsubset=F[logicAnd(F>fRange[0],F<fRange[1])]
+#	print('Size of reduced Pxx: {0:d}x{1:d} '.format(size(temp,0),size(temp,1)))
+	try :
+		fp=squeeze([ Fsubset[P==max(P)] for P in transpose(Pxx[logicAnd(F>fRange[0],F<fRange[1]),:]) ]) #Pull out frequency at which maximum power occurs for each time bin.
+	except : #Case where frequency bins have multiple entries at same max value.
+#		pdb.set_trace()
+		temp=[ Fsubset[P==max(P)] for P in transpose(Pxx[logicAnd(F>fRange[0],F<fRange[1]),:]) ] #Pull out frequency at which maximum power occurs for each time bin.
+		#Take first element whose value is equal to the maximum value for the relevant frequency bin.
+		
+
+	return fp, T

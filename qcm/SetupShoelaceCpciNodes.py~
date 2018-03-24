@@ -1,0 +1,29 @@
+from MDSplus import *
+from myTools import *
+
+s=-1 #Change model tree
+
+magTree=Tree('magnetics',s,'edit') #Open magnetics tree for editing
+
+topNode=magTree.getNode('shoelace')
+
+print('Adding CPCI nodes for Shoelace antenna (i.e. new for digitizer)')
+
+try:
+    topNode.addNode('cpci','structure')
+except:
+    print('Couldn''t add "cpci" node under magnetics::top.shoelace')
+
+topNode=topNode.getNode('cpci')
+
+#Add digitizer start and stop time nodes
+try:
+    topNode.addNode('dt216_start','numeric')
+    topNode.addNode('dt216_end','numeric')
+    topNode.addNode('dt216_freq','numeric')
+except:
+    print('Couldn''t add "cpci" node under magnetics::top.shoelace')
+
+
+magTree.write()
+print('New tree written to database')

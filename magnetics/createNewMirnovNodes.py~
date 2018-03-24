@@ -1,0 +1,132 @@
+'''
+This script adds new Mirnov coil nodes for BP_GH_BOT and BP_GH_TOP, replacing BP_KA_TOP and BP_KA_BOT.  Note that the coils were swapped in terms of poloidal order, so the coil that used to be BP_KA_TOP is now BP_GH_BOT, and BP_KA_BOT, BP_GH_TOP.
+
+Ted Golfinopoulos, 17 March 2016
+'''
+
+from MDSplus import *
+import re
+import sys #For getting command line arguments
+import myTools 
+
+#Parse command line arguments.
+if(len(sys.argv)>1) :
+	#Parse shot information, contained in first command-line argument
+	sList=myTools.parseList(sys.argv[1])
+else :
+	sList=-1 #Default to shot -1
+
+def addNewNodes(s) :
+    '''
+    This function adds the appropriate nodes, BP_GH_BOT and BP_GH_TOP, to the tree.
+    USAGE:
+        addNewNodes(s)
+        
+    INPUT:
+         s=shot number - tree will be opened for edit internally
+         
+    OUTPUT:
+        none
+         
+    SIDE EFFECT:
+        add BP_GH_TOP and BP_GH_BOT
+
+    Ted Golfinopoulos, 17 March 2016
+    '''
+    #Open tree in edit mode
+    myTree=Tree('magnetics',s,'edit')
+    try :
+        topNode=myTree.getNode('active_mhd.signals')
+        topNode.addNode('bp_gh_bot','signal')
+        topNode.addNode('bp_gh_top','signal')
+        myTree.write() #Write changes to tree.
+    except :
+        print("Could not add BP_GH_BOT and/or BP_GH_TOP to magnetics tree for Shot "+str(s)+" - nodes may exist already")
+
+def updateNodeInfo(s) :
+    '''
+    Perform other upkeep functions:
+    1. turn off BP_KA_BOT and BP_KA_TOP
+    2. swap in BP_GH_TOP for BP_KA_BOT and BP_GH_BOT for BP_KA_TOP in \MAGNETICS::TOP.LOW_N_COILS:NODENAME
+    3. change \MAGNETICS::TOP.LOW_N_COILS:PHI, \MAGNETICS::TOP.LOW_N_COILS:R, and \MAGNETICS::TOP.LOW_N_COILS:Z for new coils
+    4. copy TDI expression at KA coil nodes to GH coil nodes, mapping BP_KA_TOP to BP_GH_BOT and BP_KA_BOT to BP_KA_TOP
+    
+    calib stays the same - by placing BP_GH_TOP at the index for BP_KA_BOT and BP_GH_BOT for BP_KA_TOP, no adjustment needs to be
+    made for the ordering of the low_n calibrations
+
+    Ted Golfinopoulos, 17 March 2016
+    '''
+    myTree=Tree('magnetics',s)
+    
+    #Turn off nodes for BP_KA_TOP and BOT
+    myTree.getNode('active_mhd.signals.bp_ka_top').setOn(False)
+    myTree.getNode('active_mhd.signals.bp_ka_bot').setOn(False)
+    
+    #Contents of \MAGNETICS::TOP.LOW_N_COILS:NODENAME formerly (on 17 March 2016)
+    #["BP_KA_TOP","BP_KA_BOT","BP_AB_TOP","BP_BC_TOP","BP_BC_BOT","BP_EF_TOP","BP_EF_BOT"]
+    #so BP_KA_TOP index is 0 and BP_KA_BOT index is 1.
+    #Then BP_GH_BOT index is 0 and BP_GH_TOP index is 1, due to swapping of coils.
+    ghTopInd=1
+    ghBotInd=0
+    
+    #Nominal vertical locations of coils - for now, assume symmetric about midplane, and use
+    #design-value separation between coils from stud-welding fixture
+    #Original z values on 17 March 2016: [.0985,-.0985,.0985,.0985,-.0985,.1082,-.1092]
+    zTop=(10.125/2.0-1.0-0.0873)*0.0254 #Vertical position of coil [m]
+    zBot=-zTop 
+
+    #Nominal major radii - leave the same for now - Artec Spider 3D scans may inform this later.
+    #Original values on 17 March 2016: [.9126,.9131,.9126,.9146,.9151,.9126,.9131]
+    
+    #Nominal toroidal angle - use old toroidal angle of Shoelace antenna, -240 degrees, since stud 
+    #welding fixture for coils at new location was centered on old studs for Shoelace antenna
+    #Original values on 17 March 2016: [-344.8,-344.8,-10.16,-59.87,-59.87,-169.55,-169.55]
+    phi0=-240.0
+    phiTop=phi0
+    phiBot=phi0
+    
+    def insertNewData(myNode, myInds, myVals) :
+        '''
+        Grab data as array, replace values at specified indices, and store new array back in tree.
+        insertNewData(myNode, myInds, myVals)
+        myNode=MDSplus node object whose data needs to be replaced
+        myInds=array of indices
+        myVals=values corresponding to each index in array
+        Ted Golfinopoulos, 17 March 2016
+        '''
+        newVals=myNode.getData().evaluate().data() #Pull original values
+        myUnits=myNode.getData().evaluate().getUnits() #Pull units
+        print(newVals)
+        #Replace data
+        for ii in range(len(myInds)) :
+            newVals[ii]=myVals[ii]
+        print(newVals)
+        #Store new array
+        myNode.putData(Data.compile('Build_With_Units($1,$2)',newVals,myUnits))
+        
+    #Set new values
+    replaceInds=[ghTopInd,ghBotInd]
+    insertNewData(myTree.getNode('\MAGNETICS::TOP.LOW_N_COILS:PHI'), replaceInds, [phiTop,phiBot])
+    insertNewData(myTree.getNode('\MAGNETICS::TOP.LOW_N_COILS:z'), replaceInds, [zTop,zBot])
+    
+    #Copy TDI expressions from KA nodes to GH nodes, [ka_top,ka_bot] to [gh_bot,gh_top]
+    oldNodes=[myTree.getNode('ACTIVE_MHD.SIGNALS:BP_KA_TOP'),myTree.getNode('ACTIVE_MHD.SIGNALS:BP_KA_BOT')]
+    newNodes=[myTree.getNode('ACTIVE_MHD.SIGNALS:BP_GH_TOP'),myTree.getNode('ACTIVE_MHD.SIGNALS:BP_GH_BOT')]
+    for ii in range(len(oldNodes)):
+        #Change references to BP_KA_BOT in TDI expression to BP_GH_TOP, and like wise for KA_TOP/GH_BOT
+        newData=re.sub('(BP_.._(BOT|TOP))',str(newNodes[replaceInds[ii]].getNodeName()),str(oldNodes[ii].getData()))
+        newNodes[replaceInds[ii]].putData( newData )
+
+
+    
+
+    
+        
+    
+#Add nodes for each shot in list
+for s in sList :
+    print("Adding new nodes, BP_GH_BOT and BP_GH_TOP, for "+str(s))
+    addNewNodes(s)
+    print("Updating node information for "+str(s))
+    updateNodeInfo(s)
+    print("Finished updates for Shot "+str(s))

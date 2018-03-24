@@ -1,0 +1,42 @@
+#This script changes references fpr BP1T_GHK,2T_GHK,3T_GHK to correct the tree model for the actual wiring PRIOR TO THE END OF 1120427 - after this, the patching was changed so that BP1T_GHK,2T,3T go into INPUT_[07,08,09] of ACQ_216_1
+#Ted Golfinopoulos, 27 April 2012
+from MDSplus import *
+import re
+import sys #For getting command line arguments
+
+#Parse command line arguments.
+if(len(sys.argv)>1) :
+	s1=int(sys.argv[1]) #Grab shot number from command line.
+else :
+	s1=-1 #Default to shot -1
+
+if(len(sys.argv)>2) :
+	s2=int(sys.argv[2]) #Grab shot number from command line.
+elif(s1==-1) :
+	s2=s1 #If s1 is the model tree, only do s=-1; don't run to s=0
+else :
+	s2=s1 #Only do a single shot
+
+#Loop through range of shots
+for s in range(s1,s2+1) :
+	tree=Tree('magnetics',s)
+	nodeArr=[tree.getNode('active_mhd.signals.BP1T_GHK'), tree.getNode('active_mhd.signals.BP2T_GHK'), tree.getNode('active_mhd.signals.BP3T_GHK')]
+	exprFromArr=['CPCI:ACQ_216_1:INPUT_07','CPCI:ACQ_216_1:INPUT_08','CPCI:ACQ_216_1:INPUT_09']
+	exprToArr=['CPCI:ACQ_216_1:INPUT_09','CPCI:ACQ_216_1:INPUT_07','CPCI:ACQ_216_1:INPUT_08']
+
+	#Loop through all nodes
+	for ii in range(0,len(nodeArr)) :
+		#print(n)
+		try :
+			expr=nodeArr[ii].getData()
+			#print(str(expr))
+			try :
+				if (len(re.findall(exprFromArr[ii], str(expr)))>0) :#If there are matches, replace old digitizer name with new.
+					newExpr=re.sub(exprFromArr[ii], exprToArr[ii], str(expr)) #Need to to-string expression in order for regular expression to work.
+					#print(str(n) + ' -> ' + str(newExpr))
+					nodeArr[ii].putData(Data.compile(newExpr)) #Put new expression into node.
+					print( str(nodeArr[ii])+" --- Now contains: "+str(nodeArr[ii].getData()) )
+			except : print("String replacement didn't work.  Expr was "+str(expr))
+		except TreeNoDataException :
+			#Continue
+			print("No data in "+nodeArr[ii].getPath()+"; moving on.")

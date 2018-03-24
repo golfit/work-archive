@@ -1,0 +1,14 @@
+Scope.geometry: 600x500+202+226
+Scope.title: "MDS Scope"
+Scope.icon_name: "Scope"
+Scope.title_event: 
+Scope.print_file: dwscope.ps
+Scope.print_event: 
+Scope.print_portrait: 0
+Scope.print_window_title: 0
+Scope.printer: lp
+Scope.font: -Adobe-New Century Schoolbook-Medium-R-Normal--12-120-75-75-P-70-ISO8859-1
+Scope.columns: 1
+Scope.rows_in_column_1: 1
+
+Scope.plot_1_1.height: 420

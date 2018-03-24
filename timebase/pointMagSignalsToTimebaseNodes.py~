@@ -1,0 +1,109 @@
+'''
+Point magnetics node signals to timebase node which picks (automatically) between corrected timebase (if it exists) or default timebase.
+
+Ted Golfinopoulos, 10 June 2014
+'''
+
+from MDSplus import *
+import sys
+import MDSplus
+import re
+
+shot=int(sys.argv[1])
+
+magTree=Tree('magnetics',shot)
+#timebaseNode=magTree.getNode('active_mhd.signals.timebase')
+
+#myNewDim=Data.compile(timebaseNode.getPath())
+
+elimTags=['OLD','_K$','ASP','BR','UPPER','LOWER','GROUND','VOUT','F_AMHD','CONTROL','P_']
+
+def fixTimebase(signalNode,timebaseNode) :
+    #print(signalNode)
+    myData=signalNode.record
+#    print(myData)
+ #   print(type(myData))
+  #  print(type(signalNode))
+    #The calling sequence, Data.compile(myTdiStr), was broken by an "improvement" to MDSplus around 6 Oct. 2017
+    myNewDim=magTree.TdiCompile(timebaseNode.getPath())
+    #print(signalNode.getData().decompile())
+    #print(type(myData))
+    #MDSplus apparently no longer has tdibuiltins in Version 7.18.0, at least as of 28 Sep. 2017.
+    #Check MDSplus.__version__
+    #type(myData)==MDSplus.tdibuiltins.builtins_other.CONDITIONAL
+    if( signalNode.getUsage()=='FUNCTION' or type(myData) is MDSplus.compound.CONDITIONAL ) :
+        if( type(myData.getArguments()[0]) is MDSplus.compound.Signal ) :
+            myArgs=myData.getArguments()
+            myArgs[0].setDimensions(tuple([myNewDim]))
+            myData.setArguments(myArgs)
+            signalNode.record=myData #Assign record corrected version of data.
+            #print(signalNode.getData().decompile())
+        #else :
+        #    print(type(myData.getArguments()[0]))
+        
+    elif( signalNode.getUsage()=='SIGNAL' ) :
+        myData.setDimensions(tuple([myNewDim]))
+        signalNode.record=myData #Assign record corrected version of data.
+        #print(signalNode.getData().decompile())
+    
+#    elif( signalNode.getUsage()==MDSplus.treenode.TreeNode ) :
+#        newSig=Data.compile('Build_Signal(*,*,*)')
+#        newSig.setValue(Data.compile("DATA($VALUE)"))
+#        newSig.setRaw(myData)
+#        newSig.setDimensions(tuple([myNewDim]))
+#       myData=newSig
+    else :
+        print("Input node is neither a function nor a signal nor a tree node reference; don't know how to make fix.  No changes made.")
+        return
+
+numMagSigNodesFixed=0
+#Fix "Signals" nodes
+sigNodes=magTree.getNode('active_mhd.signals').getNodeWild('*')
+
+for sigNode in sigNodes :
+    if(not(any([re.match('.+'+elimTag,str(sigNode.getFullPath())) for elimTag in elimTags]))) :
+        #Parse digitizer number from expression in node.
+        #print(str(sigNode.getFullPath()))
+        try :
+            #First, check if node has a subnode called raw:
+            digiNum=re.findall( 'acq_216_(\d)', str(sigNode.getNode('raw').getData().decompile()).lower())
+        except :
+            #Otherwise, try to parse digitizer number from signal
+            digiNum=re.findall( 'acq_216_(\d)', str(sigNode.getData().decompile()).lower())
+
+        if not all([digiNum[0]==digiNum[i] for i in range(0,len(digiNum))]) :
+            print("Error in "+str(sigNode.getFullPath())+" - multiple digitizers apparently referenced in node.  Skipping.")
+            continue
+        elif len(digiNum)==0:
+            print("Could not find digitizer number for "+str(sigNode.getFullPath())+" - skipping")
+            continue
+
+        #Multiple occurrences of the digitizer path may occur - isolate the number from the list returned by findall.
+        #print(digiNum)
+        #print(str(sigNode.getFullPath()))
+        digiNum=digiNum[0]
+
+        #Selecte timebase node corresponding to the digitizer on which data from this coil are recorded.
+        timebaseNode=magTree.getNode('active_mhd.signals.timebase'+str(digiNum))
+
+        try :
+            fixTimebase(sigNode,timebaseNode) #Point signal node to new timebase node
+        except :
+            print("No timebase in node data of"+str(sigNode.getFullPath()))
+
+        try :
+            fixTimebase(sigNode.getNode('raw'),timebaseNode) #Point signal node to new timebase node
+        except :
+            print("No raw node for"+str(sigNode.getFullPath()))
+        numMagSigNodesFixed+=1
+        #try :
+         #   fixTimebase(sigNode,timebaseNode) #Point signal node to new timebase node
+          #  numMagSigNodesFixed+=1
+        #except :
+         #   #Can't process the node - just skip it and keep going.
+          #  print("Can't process {0:s}".format(str(sigNode.getPath())))
+           # continue
+
+print("Shot={0:d} - fixed {1:d} magnetics signals nodes".format(shot,numMagSigNodesFixed))
+
+

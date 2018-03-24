@@ -1,0 +1,161 @@
+#This script processes the transfer function between the Shoelace antenna current and pickup signals (e.g. Mirnov coils, etc.)
+#Ted Golfinopoulos, 13 June 2012
+
+from MDSplus import *
+import sys #For getting command line arguments
+import numpy
+import myTools_no_sql as myTools
+from scipy.fftpack import hilbert
+from scipy.interpolate import interp1d
+import re
+from calcTransFun import *
+
+#Parse shot information, contained in first command-line argument
+sList=myTools.parseList(sys.argv[1])
+
+#List of nodes in remaining command line arguments
+
+stringArgs=sys.argv[2:]
+
+#Loop through shots in list
+for s in sList :
+    print("Shot {0:d}".format(s))
+
+    #Open magnetics tree to get Shoelace antenna signal.
+    cmodTree=Tree('cmod',s)
+
+    #Get frequency points to extract range of frequencies.
+    if(s < 1110000000 ) : #For Active MHD shots
+        ftae,tftae=myTools.getYX(cmodTree.getNode('mhd.magnetics.ACTIVE_MHD.DPCS:FTAE_CALC'))
+        deltaf=cmodTree.getNode('mhd.magnetics.ACTIVE_MHD.DPCS:DELTAF').getData().evaluate().data()
+        tftae=numpy.linspace(tftae[0],tftae[-1],len(ftae))
+        ftae=ftae[numpy.logical_and(tftae>0.5,tftae<1.5)]
+        fpts=[min(ftae)-deltaf,max(ftae)+deltaf]
+    else : #For Shoelace antenna work
+        fpts=cmodTree.getNode('mhd.magnetics.shoelace.vco_freq').getData().evaluate().data()
+
+    freqPad=5.E3 #Extend frequency range by this amount - padding.
+    fRange=numpy.array([min(fpts)-freqPad,max(fpts)+freqPad])
+
+    #Get amplifier on and off times
+    try :
+        t1=cmodTree.getNode('mhd.magnetics.shoelace.rf_gate.on').getData().evaluate().data()
+        t2=cmodTree.getNode('mhd.magnetics.shoelace.rf_gate.off').getData().evaluate().data()
+    except :
+        t1=0.5
+        t2=1.5
+        print('Gate times set at 0.5 and 1.5 s')
+
+    if(s<1110000000) : #Old current node for Active MHD antenna - for comparison with Jason Sears' work.
+        antNode=cmodTree.getNode('mhd.magnetics.active_mhd.signals:i_gh_upper_z')
+    else : #Shoelace antenna current node.
+        antNode=cmodTree.getNode('mhd.magnetics.shoelace.ant_i')
+
+    #Check to see if antenna current node is on - if it is not, skip and continue.
+    if(not(antNode.isOn())):
+        print("Antenna current node is off for Shot {0:d} - skip and continue".format(s))
+        continue
+    elif(t2-t1<=0.001) : #Check to make sure antenna actually ran - this is not a perfect check, but is one way to avoid wasted computation during the shot cycle.
+        print("Antenna is gated off for Shot {0:d} - skip and continue".format(s))
+        continue
+
+    #Get timebase and signal.
+    ti=antNode.getData().evaluate().dim_of().data() #Timebase of current signal
+    fs=1./(ti[1]-ti[0]) #Sampling frequency.
+
+    ia=antNode.getData().evaluate().data() #Antenna current signal [A]
+
+    try :
+        iaHilb=ia+1j*antNode.getNode('hilb').getData().evaluate().data() #Hilbert transform of current signal
+    except : #If there's no hilbert transform node, calculate it.
+        iaHilb=ia-1j*hilbert(ia)
+        expr=Data.compile("BUILD_SIGNAL($VALUE, $1, $2)", numpy.imag(iaHilb), ti)
+        antNode.getNode('hilb').putData(expr)
+
+    #Pull regular expressions to determine which TF nodes to run calculation on
+    nodeRegex=myTools.parseNodeNames(stringArgs)
+    
+    if(len(nodeRegex)>0) :
+        #Flag to indicate whether user has specified a premade list of nodes, or has entered them explicitly at the command line.
+        usePremadeListFlag=True
+    else :
+        usePremadeListFlag=False
+
+    if(not(usePremadeListFlag)) :
+        nodeList=stringArgs #Otherwise, user has specified list of signals, explicitly.
+
+    #Calculate cross-correlation component if requested.
+#    if( any([x=="crosscorr" for x in stringArgs]) or any([x=="mscohere" for x in stringArgs]) ) :
+#        crossCorrFlag=True
+#    else : 
+#        crossCorrFlag=False
+
+    #Pull all sub-nodes one layer deep under mhd.magnetics.shoelace.trans_fun
+    allNodes=cmodTree.getNode('mhd.magnetics.shoelace.trans_fun').getNodeWild('*')
+
+    #Loop through nodes for which transfer function is desired
+    for thisNode in allNodes :
+        if( not re.match(nodeRegex,str(thisNode.getNodeName()).lower()) ) :
+            continue #Skip if user does not request processing this node
+
+        print('Processing node '+str(thisNode.getNodeName()))
+        sigNode=thisNode.getNode('raw') #Get raw data subnode, which contains a signal that will be processed
+
+        #See if node is on; if it is off, skip and go to next.
+        if( not sigNode.isOn() or not thisNode.isOn() ) :
+            print("Node, "+str(sigNode.getPath())+" is off; skipping and continuing")
+            continue
+
+        #Get signal of node.
+        y=sigNode.getData().evaluate().data() #"Output" signal - calculate transfer function with respect to this.
+        print('Pulled data')
+        
+        #Resample onto magnetics timebase.
+        tsig=sigNode.getData().evaluate().dim_of().data() #Signal timebase
+        t1,t2=[max(t1,tsig[0]),min(t2,tsig[-1])] #Choose minimal data range between signal time base and antenna current timebase.
+        print('Pulled timebase')
+        print('y')
+        print(y)
+        interpObj=interp1d(tsig,y)
+        y=interpObj(ti[numpy.logical_and(ti>t1,ti<t2)]) #Interpolate y only in time range of interest.
+        print('y interp')
+        print(y)
+        print('Interpolated signal')
+        #Calculate transfer function
+        #Let transfer function be band-limited with upper-bound 10% of lower bound of frequency range of interest.
+        H=calcTransFun(y,iaHilb[numpy.logical_and(ti>t1,ti<t2)],fRange,fs,min(fRange)*0.1) 
+        print('Calculated transfer function')
+        #Prepare expression to put in tree with data.
+        #Put transfer function in tree as array of complex numbers.
+        expr=Data.compile("BUILD_SIGNAL($VALUE, $1, Build_Dim(Build_Window(0,$2,$3), * : * : $4))", H, len(H)-1,t1,(t2-t1)/(len(H)-1))
+
+        thisNode.putData(expr)
+        #Make nodes that get real and imaginary parts of transfer function for implementations
+        #of MDS interface which can't handle getting complex types.
+        thisNode.getNode('Hr').putData(Data.compile("real("+thisNode.getPath()+")"))
+        thisNode.getNode('Hi').putData(Data.compile("aimag("+thisNode.getPath()+")"))
+    
+        print("Put transfer function data in "+thisNode.getPath()+" for Shot {0:d}".format(s))
+
+        #######################Cross-coherence
+#        if( crossCorrFlag ) :
+#            Hyx=calcTransFun(ia[numpy.logical_and(ti>t1,ti<t2)],y-1j*hilbert(y),fRange,fs,min(fRange)*0.1)
+#            Cxy=H*Hyx #Cross-coherence spectrum for component.  This follows since Hxy=Pxy/Pxx, and Hyx=Pyx/Pyy=Pxy'/Pyy, and Cxy:=|Pxy|^2/(Pxx*Pyy), where the prime denotes complex conjugation.
+#
+#            mscohereNode=topNode.getNode('mscohere')
+#
+#            try :
+#                #Add sub-nodes for node.
+#                n=mscohereNode.getNode(probeName)
+#            except :
+#                n=mscohereNode.getNode(probeName)
+#                print("...magnitude squared coherence subnodes for "+probeName+" are already there")
+#
+#            #Prepare expression to put in tree with data.
+#            #Put transfer function in tree as array of complex numbers.
+#            expr=Data.compile("BUILD_SIGNAL($VALUE, $1, $2)", Cxy, tH)
+#            n.putData(expr)
+#
+#            n.getNode('raw').putData(Data.compile(nodeName)) #Put pointer to raw data of signal.
+#
+#            print("Put magnitude square coherence component data in "+n.getPath()+" for Shot {0:d}".format(s))

@@ -1,0 +1,9 @@
+~7 March 2013
+
+python ProcessCrossCohereNoAdd.py 1120619002:1120619028 allmag pci polarimeter
+python ProcessCrossCohereNoAdd.py 1120620002:1120620015 allmag pci polarimeter
+python ProcessCrossCohereNoAdd.py 1120712022:1120712029 allmag pci polarimeter
+python ProcessCrossCohereNoAdd.py 1120814002:1120814032 allmag pci polarimeter
+python ProcessCrossCohereNoAdd.py 1120926003:1120926019 allmag pci polarimeter
+
+,1120814002:1120814032,1120926003:112 allmag

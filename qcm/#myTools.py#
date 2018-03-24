@@ -1,0 +1,292 @@
+#Module containing useful functions.  Note that the numpy library is used!!!
+#2 Feb 2012, Ted Golfinopoulos
+
+import numpy
+import scipy
+import scipy.fftpack
+import re
+
+import MDSplus as mds
+
+def find(x) :
+	"""
+	Return indices of all elements with a true logic value.
+	This is implemented in the pylab library, but we don't have
+	access to this on alcdaq3, so here is a "temporary" kluge.
+
+	Dependency on numpy!!!
+	"""
+	output=[] #Initialize (integer) vector of indices.
+	for i in range(0,len(x)) :
+		if(x[i]) : output.append(int(i)) #If x[i] is true, store index.
+	return numpy.core.multiarray.array(output) #Wrap in an array object so that operator arithmetic integers is possible.
+
+def smooth(x, numPoints) :
+	"""
+	Use numpy convolve function to implement a moving-window average of the data.
+
+	Ted Golfinopoulos, 16 July 2012
+	"""
+	window=numpy.ones(numPoints)/numPoints #Window for moving average filter
+	return numpy.convolve(x,window,'same')
+
+
+def bp(x, fs, fLow, fHigh) :
+	"""
+	Band-pass filter implemented as top-hat function in frequency domain (via discrete Fourier transform)
+
+	USAGE:
+		y=bp(x, fs, fLow, fHigh)
+	INPUT:
+		x=input signal
+		fs=sampling frequency [Hz]
+		fLow=lower frequency in pass band [Hz]
+		fHigh=upper frequency in pass band [Hz]
+	OUTPUT: y=band-pass-filtered signal
+
+	Ted Golfinopoulos, 7 June 2012
+	"""
+
+	#Input check
+	if(fLow > fHigh) :
+		raise IOError('fLow must be < fHigh')
+
+	if(fHigh > fs ) :
+		raise IOError('fs must be > fHigh')
+
+	#Calculate one-sided Fourier transform of signal.
+	[X,f]=myRfft(x,fs) #Compute real fast Fourier transform
+	X[numpy.logical_and(f<fLow,f>fHigh)]=0. #Zero out parts of Fourier transform outside of pass band.
+
+	#Band-limit X, transform back to Fourier domain, and return to caller
+	return scipy.fftpack.irfft( X ) #Note: numpy.logical_and() is like Matlab &
+
+def hp(x, fs, fLow) :
+	"""
+	High-pass filter implemented as step function in frequency domain (via discrete Fourier transform)
+
+	USAGE:
+		y=hp(x, fs, fLow)
+	INPUT:
+		x=input signal
+		fs=sampling frequency [Hz]
+		fLow=lower frequency in pass band [Hz] - pass above this frequency
+	OUTPUT: y=band-pass-filtered signal
+
+	Ted Golfinopoulos, 7 June 2012
+	"""
+
+	#Input check
+	if(fLow > fs ) :
+		raise IOError('fs must be > fLow')
+
+	#Calculate one-sided Fourier transform of signal.
+	[X,f]=myRfft(x,fs) #Compute real fast Fourier transform
+	X[f<fLow]=0. #Zero out parts of Fourier transform outside of pass band.
+
+	#Pass components of X above fLow, transform back to Fourier domain, and return to caller
+	return scipy.fftpack.irfft( X )
+
+def lp(x, fs, fHigh) :
+	"""
+	Low-pass filter implemented as step function in frequency domain (via discrete Fourier transform)
+
+	USAGE:
+		y=lp(x, fs, fHigh)
+	INPUT:
+		x=input signal
+		fs=sampling frequency [Hz]
+		fHigh=upper frequency in pass band [Hz] - pass beneath this frequency
+	OUTPUT: y=band-pass-filtered signal
+
+	Ted Golfinopoulos, 7 June 2012
+	"""
+
+	#Input check
+	if(fHigh > fs ) :
+		raise IOError('fs must be > fHigh')
+
+	#Calculate one-sided Fourier transform of signal.
+	[X,f]=myRfft(x,fs) #Compute real fast Fourier transform
+	X[f>fHigh]=0. #Zero out parts of Fourier transform outside of pass band.
+
+	#Band-limit X, transform back to Fourier domain, and return to caller
+	return scipy.fftpack.irfft( X )
+	
+
+def myRfft(y, fs) :
+	"""
+	Right-handed fast Fourier transform using scipy.fftpack.rfft
+	USAGE:
+		Y,f=myRfft(y,fs)
+		y=signal to transform (time domain)
+		fs=sampling frequency
+		Y=transformed signal (Fourier domain, positive frequencies, only)
+		f=frequency axis of Y (same units as fs), f>=0
+	Ted Golfinopoulos, 7 June 2012
+	"""
+	Y=scipy.fftpack.rfft(y)
+	f=(fs/2.E0)*numpy.linspace(0.E0,1.E0,len(Y))
+	return [Y,f]
+
+def myDownsample(y, N) :
+	"""
+	yds = myDownsample(y,N)
+
+	yds is y sampled at every Nth index, starting with yds[0]=y[0] with y[range(0,len(y),N)].  Implementing Matlab's downsample.
+	Ted Golfinopoulos, 7 June 2012
+	"""
+
+	return y[range(0,len(y),N)]
+
+
+def myDownsampleWithSmooth(y, N) :
+	"""
+	yds = myDownsampleWithSmooth(y,N)
+
+	yds is y sampled at every Nth index, starting with yds[0]=y[0] with y[range(0,len(y),N)], but y is first averaged across all N points centered on the selected index.  Boundary conditions: no wrap around.
+	Ted Golfinopoulos, 16 June 2012
+	"""
+
+	jj=0;
+	ynew=numpy.zeros( 1 + int((len(y)-1)/N) )
+	for ii in range(0,len(y),N) :
+		lowerBound=min(max(0,ii-numpy.ceil(N*0.5)), len(y)-1-numpy.ceil(N*0.5))
+		upperBound=min(lowerBound+numpy.floor(N*0.5),len(y)-1)
+		ynew[jj]=numpy.mean( y[ lowerBound:upperBound ] )
+		jj=jj+1
+
+	return ynew
+
+def parseList(myStr) :
+	"""
+	This function parses a list of integers from a string.  Commas separate individual entries; a colon indicates a range (inclusive)range
+	Ex.: myStr='1,3:5,11'
+	myList=parseList(myStr)
+
+	myList contains [1,3,4,5,11]
+
+	This function depends on regular expression library.
+	Ted Golfinopoulos, 7 June 2012
+	"""
+
+	elems=re.split(',|\+|\[|\]',myStr) #Split at commas for list, or + if some offset is added.
+
+	cmdStr="" #Command string - intialize.	
+	for substr in elems :
+		if(len(cmdStr)==0) :
+			 #Open concatenation to put shot list in single array.
+			#Kluge: give an empty array as first argument in case
+			#there is only one shot arg in list, since concatenate can't handle cast where there is only one input
+			cmdStr="numpy.core.multiarray.concatenate(([],"
+		else :
+			cmdStr=cmdStr+',' #Add comma for concatenation
+		if( re.match("(\d+:\d+){1,1}", substr) ) :
+			start,end=re.split(':',substr)
+			substr='range('+start+','+end+'+1)' #Replace substring by Python range function.  +1 is to make range inclusive.
+		else :
+			substr="["+substr+"]" #Bracket every integer for concatenation into a single array.
+
+		cmdStr=cmdStr+substr
+
+	cmdStr=cmdStr+"))" #Close concatenating operation
+
+	try :
+		myList=eval(cmdStr)
+		#Add additional step of converting arguments to integers.
+		return [int(s) for s in myList]
+	except :
+		print("Command string ... "+cmdStr+" ... couldn't be executed.")
+
+def parsePremadeNodeList(stringArgs, s) :
+	nodeList=[]
+	ceceNodes=[]
+
+	#Define which nodes to get signals for
+	if(any([x=="allmag" for x in stringArgs]) or any([x=="all_mag" for x in stringArgs])) :
+		print('The transfer function of all active magnetics coils will be processed.')
+		#Fetch all active signals from ACTIVE_MHD.SIGNALS
+		magTree=mds.Tree('magnetics',s)
+		nList=magTree.getNode('active_mhd.signals').getNodeWild('*')
+		onState=nList.isOn()
+		isSignal=[x=='SIGNAL' for x in nList.getUsage()]
+		nodeList=nList.getPath()
+		nodeList=nodeList[myTools.find(numpy.logical_and( isSignal, onState ))]
+		nodeList=[x.strip() for x in nodeList] #Take white space off of node list.
+		
+	elif(any([x=="somemag" for x in stringArgs]) or any([x=="some_mag" for x in stringArgs])) :
+		print('The transfer function of a subset of magnetics coils will be processed.')
+		#Process the transfer functions of a subset of Mirnov coil proves.
+		nodeList=['bp_ab_top', 'bp_bc_bot', 'bp_bc_top', 'bp_ef_bot', 'bp1t_abk', 'bp1t_ghk', 'bp3t_ghk', 'bp2t_abk', 'bp5t_ghk', 'bp5t_abk', 'bp_ef_top', 'bp_ka_bot', 'bp_ka_top']
+		nodePath='\\magnetics::top.active_mhd.signals.' #Pre-pend path to signals
+		nodeList=[nodePath+x for x in nodeList]
+
+	if(any([x=="asp" for x in stringArgs])) :
+		aspNodes=['DN:BDOT1','UP:BDOT1','DN:BDOT5','UP:BDOT5', 'DN:BDOT25','UP:BDOT25','DN:BDOT50','UP:BDOT50']
+		nodePath='\\EDGE::TOP.PROBES.ASP.MAG.'
+		aspNodes=[nodePath+x for x in aspNodes]
+		nodeList=nodeList + aspNodes #Concatenate asp nodes onto node list.
+
+	if(any([x=="pci" for x in stringArgs])) :
+		nodePath='\\pcilocal::top.results.'
+		pciNodes=[nodePath+"pci_{0:>02}".format(x) for x in range(1,32+1)]
+		nodeList=nodeList + pciNodes #Concatenate pci nodes onto node list.
+
+	if(any([x=="polarimeter" for x in stringArgs] or any([x=="polar" for x in stringArgs]))) :
+		print("The transfer function for polarimeter chords 1-3 will be processed.")
+		nodePath='\ELECTRONS::TOP.POLARIMETER.RESULTS:'
+		polarimeterNodes=[nodePath+"frot_0{0:d}".format(x) for x in range(1,3+1)]
+		nodeList=nodeList + polarimeterNodes #Concatenate polarimeter nodes onto node list.
+
+	if(any([x=="cece" for x in stringArgs])) :
+		nodePath='\ELECTRONS::TOP.CECE.HARDWARE:ACQ216:'
+		ceceNodesI=[nodePath+"input_{0:>02}".format(x) for x in [5, 10, 12, 15]]
+		ceceNodesQ=[nodePath+"input_{0:>02}".format(x) for x in [6, 11, 14, 16]]
+		ceceNodes=[[ceceNodesI[i],ceceNodesQ[i]] for i in range(0,len(ceceNodesI)) ]
+		nodeList=ceceNodesI
+
+	return nodeList,ceceNodes
+
+def getYX(n) :
+	"""
+	Usage: y,t=getYX(n)
+
+		INPUT:
+			MDS node object, n
+
+		OUTPUT: tuple y,t containing the signal and its timebase.  Syntactic sugar for
+			y=n.getData().evaluate.data()
+			t=n.getData().evaluate().dim_of().data()
+	"""
+	return (n.getData().evaluate().data(), n.getData().evaluate().dim_of().data())
+
+def getDataInRange(n,t1,t2) :
+	"""
+	Grab data from an MDS signal node in a specified subset of the timebase.
+	USAGE:
+		y,t=getDataInRange(srcNode,t1,t2)
+
+		srcNode is an MDSplus node object
+		t1 and t2 are the start and stop times of the timebase subset in which to grab data
+		y is the signal in the specified range
+		t is the corresponding timebase, generated internally in Python from start and stop times extracted from the database.
+	"""
+	myStr="_y="+n.getPath()+", _t=dim_of("+n.getPath()+"), pack(_y, _t > {0:f} and _t < {0:f})".format(t1,t2)
+	t1Actual=mds.mdsdata.Data.compile("_t=dim_of("+n.getPath()+ "), _t[firstloc(_t > {0:f} and _t < {0:f})]".format(t1,t2) ).evaluate().data()
+	t2Actual=mds.mdsdata.Data.compile("_t=dim_of("+n.getPath()+ "), _t[lastloc(_t > {0:f} and _t < {0:f})]".format(t1,t2) ).evaluate().data()
+	y=mds.mdsdata.Data.compile( myStr ).evaluate().data() #Grab data in specified range
+	return y, numpy.linspace(t1Actual,t2Actual,len(y)) #Regenerate timebase locally
+
+#for substr in elems :
+#		if(len(cmdStr)==0) :
+#			 #Open concatenation to put shot list in single array.
+#			#Kluge: give an empty array as first argument in case
+#			#there is only one shot arg in list, since concatenate can't handle cast where there is only one input
+#			cmdStr="numpy.core.multiarray.concatenate(([],"
+#		else :
+#			cmdStr=cmdStr+',' #Add comma for concatenation
+#		if( re.match("(\d+:\d+){1,1}", substr) ) :
+#			start,end=re.split(':',substr)
+#			substr='range('+start+','+end+'+1)' #Replace substring by Python range function.  +1 is to make range inclusive.
+#		else :
+#			substr="["+substr+"]" #Bracket every integer for concatenation into a single array.
